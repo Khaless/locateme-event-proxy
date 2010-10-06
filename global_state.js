@@ -41,7 +41,8 @@ GlobalState.prototype = {
 			this.cstate_by_topic[topic] = [];
 			/* pubsub_client and topic_callback abstraction leak */
 			var self = this;
-			pubsub_client.subscribeTo(topic, function(){self.topic_callback.apply(self, arguments)} );
+			/* we make sure to prefix the topic name with Topic. */
+			pubsub_client.subscribeTo("Topic." + topic, function(){self.topic_callback.apply(self, arguments)} );
 		}
 
 		if (!client_state.is_in_topic(topic)) {

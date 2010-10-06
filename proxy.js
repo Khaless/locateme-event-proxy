@@ -1,3 +1,25 @@
+/*
+ * Event Proxy Prototype
+ * =====================
+ *
+ * Author: Mathew Rodley <mathew@rodley.com.au>
+ *
+ * Assumptions:
+ * 1) Redis is running
+ * 2) The following key is setup in redis:
+ *		User.<guid>.Topics = Set [ TopicA, TopicB, TopicC ]
+ *
+ * 3) Once joined a user sends their GUID over the Websocket to
+ *		identify themselfs. They will then be subscribed to the 
+ *		topics listed in the set at key User.<guid>.Topics
+ *
+ * To Run:
+ * 1) Start Redis with redis-server
+ * 2) Add appropriate keys
+ * 3) Start Proxy with node proxy.js
+ *
+ */
+
 var sys   = require("sys"),
 		http  = require("http"),
 		redis = require("./lib/redis-client"),
@@ -28,7 +50,15 @@ server = http.createServer(function(req, res) {
 	res.writeHead(200, {"Content-Type": "text/html"});
 	res.write("<html><head><title>Statistics</title></head><body>");
 	res.write("<h1>Statistics</h1>");
-	res.write("Clients: " + global_state.num_clients() );
+	res.write("Number of clients connected: " + global_state.num_clients() );
+	res.write("<h1>Clients</h1>");
+	for(var guid in global_state.cstate_by_guid) {
+		res.write("<h3>" + guid + "</h3><ul>");
+		for(var i=0; i<global_state.cstate_by_guid[guid].topics.length; i++) {
+			res.write("<li>" + global_state.cstate_by_guid[guid].topics[i] + "</li>");
+		}
+		res.write("</ul>");
+	}
 	res.write("</body></html>");
 	res.end();
 });
@@ -47,17 +77,42 @@ socket.on("connection", function(client) {
 	client.on("message", function(message) {
 		
 		if(state.state == ClientState.State.Initial) {
+			
 			/* 
 			 * Todo: Some Authentication and channel query protocol...
 			 */
 			state.guid = message;
 			console.log("Received Identity from client: " + state.guid);
+
+			state.state = ClientState.State.Authenticated;
+			
+			/* 
+			 * Add this user to the global state collection as soon as we
+			 * know who they are.
+			 */
 			global_state.add_client_state(state);
-			global_state.add_client_to_topic("TopicA", state);
+
+			/* 
+			 * Join this user to the active topics they should be subscribed to.
+			 *
+			 * In this prorotype Users.<guid>.Topics is a set containing
+			 * the topics they should be subscribed to.
+			 */
+			commands_client.smembers("User." + state.guid + ".Topics", function(err, members) {
+				if (err) assert.fail(err, "TODO: Error Handling...");
+				if (members) {
+					for(var i=0; i<members.length; i++) {
+						console.log("Adding Client " + state.guid + " to topic " + members[i]);
+						global_state.add_client_to_topic(members[i].toString(), state);
+					}
+				}
+			});
+
 		}
 		else {
-			console.log("Received message from client:" + state.guid);
+			console.log("Received some sort of message from client:" + state.guid);
 		}
+
 	});
 
 	client.on("disconnect", function() {
