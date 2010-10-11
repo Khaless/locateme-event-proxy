@@ -14,7 +14,8 @@ GlobalState = function(pubsub_client) {
 
 GlobalState.prototype = {
 
-	topic_callback: function topic_callback(topic, data) {
+	topic_callback: function topic_callback(full_topic_name, data) {
+		var topic = full_topic_name.toString().substr(6); // Remove the prefix of 'Topic.'
 		try {
 			for(var i in this.cstate_by_topic[topic]) {
 				this.cstate_by_topic[topic][i].client.send(data);
