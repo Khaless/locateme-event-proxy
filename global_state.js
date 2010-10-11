@@ -15,7 +15,7 @@ GlobalState = function(pubsub_client) {
 GlobalState.prototype = {
 
 	topic_callback: function topic_callback(full_topic_name, data) {
-		var topic = full_topic_name.toString().substr(6); // Remove the prefix of 'Topic.'
+		var topic = full_topic_name.toString().substr(6); // Remove the prefix of 'topic:'
 		try {
 			for(var i in this.cstate_by_topic[topic]) {
 				this.cstate_by_topic[topic][i].client.send(data);
@@ -42,8 +42,8 @@ GlobalState.prototype = {
 			this.cstate_by_topic[topic] = [];
 			/* pubsub_client and topic_callback abstraction leak */
 			var self = this;
-			/* we make sure to prefix the topic name with Topic. */
-			pubsub_client.subscribeTo("Topic." + topic, function(){self.topic_callback.apply(self, arguments)} );
+			/* we make sure to prefix the topic name with topic: */
+			pubsub_client.subscribeTo("topic:" + topic, function(){self.topic_callback.apply(self, arguments)} );
 		}
 
 		if (!client_state.is_in_topic(topic)) {

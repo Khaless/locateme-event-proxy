@@ -7,11 +7,11 @@
  * Assumptions:
  * 1) Redis is running
  * 2) The following key is setup in redis:
- *		User.<guid>.Topics = Set [ TopicA, TopicB, TopicC ]
+ *		user:<lowercase guid>:topics = Set [ TopicA, TopicB, TopicC ]
  *
  * 3) Once joined a user sends their GUID over the Websocket to
  *		identify themselfs. They will then be subscribed to the 
- *		topics listed in the set at key User.<guid>.Topics
+ *		topics listed in the set at key user:<lowercase guid>.topics
  *
  * To Run:
  * 1) Start Redis with redis-server
@@ -95,10 +95,10 @@ socket.on("connection", function(client) {
 			/* 
 			 * Join this user to the active topics they should be subscribed to.
 			 *
-			 * In this prorotype Users.<guid>.Topics is a set containing
+			 * In this prorotype user:<lowercase guid>:topics is a set containing
 			 * the topics they should be subscribed to.
 			 */
-			commands_client.smembers("User." + state.guid + ".Topics", function(err, members) {
+			commands_client.smembers("user:" + state.guid + ":topics", function(err, members) {
 				if (err) assert.fail(err, "TODO: Error Handling...");
 				if (members) {
 					for(var i=0; i<members.length; i++) {
