@@ -21,7 +21,7 @@
 			socket.on("connect", function() { docit("connected"); });
 			socket.on("message", function(data) { docit("message: " + data); });
 			socket.on("disconnect", function() { docit("disconnected");});
-			socket.send("903C55B3-C6F6-4689-BEFF-2EBD0B27C05E"); /* allows us to identify as this guid */
+			socket.send("903c55b3-c6f6-4689-beff-2ebd0b27c05e"); /* allows us to identify as this guid */
 		} catch(e) {
 			alert(e);
 		}
