@@ -54,9 +54,9 @@ server = http.createServer(function(req, res) {
 	res.write("<h1>Clients</h1>");
 	for(var guid in global_state.cstate_by_guid) {
 		res.write("<h3>" + guid + "</h3><ul>");
-		for(var i=0; i<global_state.cstate_by_guid[guid].topics.length; i++) {
-			res.write("<li>" + global_state.cstate_by_guid[guid].topics[i] + "</li>");
-		}
+		global_state.cstate_by_guid[guid].topics.forEach(function(topic) {
+			res.write("<li>" + topic + "</li>");
+		});
 		res.write("</ul>");
 	}
 	res.write("</body></html>");
@@ -99,12 +99,12 @@ socket.on("connection", function(client) {
 			 * the topics they should be subscribed to.
 			 */
 			commands_client.smembers("user:" + state.guid + ":topics", function(err, members) {
-				if (err) assert.fail(err, "TODO: Error Handling...");
+				if (err) console.log(err, "TODO: Error Handling..." + err);
 				if (members) {
-					for(var i=0; i<members.length; i++) {
-						console.log("Adding Client " + state.guid + " to topic " + members[i]);
-						global_state.add_client_to_topic(members[i].toString(), state);
-					}
+					members.forEach(function(member) {
+						console.log("Adding Client " + state.guid + " to topic " + members);
+						global_state.add_client_to_topic(members.toString(), state);
+					});
 				}
 			});
 
