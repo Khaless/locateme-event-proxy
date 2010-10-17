@@ -102,8 +102,8 @@ socket.on("connection", function(client) {
 				if (err) console.log(err, "TODO: Error Handling..." + err);
 				if (members) {
 					members.forEach(function(member) {
-						console.log("Adding Client " + state.guid + " to topic " + members);
-						global_state.add_client_to_topic(members.toString(), state);
+						console.log("Adding User " + state.guid + " to Event (topic) " + member);
+						global_state.add_client_to_topic(member.toString(), state);
 					});
 				}
 			});
