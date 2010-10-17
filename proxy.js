@@ -63,7 +63,7 @@ server = http.createServer(function(req, res) {
 	res.write(str);
 	res.end();
 });
-server.listen(8124, "127.0.0.1");
+server.listen(8124, "0.0.0.0");
 console.log("Server running at http://127.0.0.1:8124/");
 
 /* 
@@ -74,6 +74,16 @@ var socket = io.listen(server);
 socket.on("connection", function(client) {
 
 	var state = new ClientState(client);
+
+	/* Here we have the option to set the heartbeat
+	 * interval for this specific client.
+	 *
+	 * The default is 10 seconds, but for some clients we may
+	 * want to increase this figure (e.g. iPhone for batter life
+	 * purposes.
+	 *
+	 * client.options.heartbeatInterval = <new interval in msec>;
+	 */
 
 	client.on("message", function(message) {
 		
