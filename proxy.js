@@ -98,7 +98,7 @@ socket.on("connection", function(client) {
 			 * In this prorotype user:<lowercase guid>:topics is a set containing
 			 * the topics they should be subscribed to.
 			 */
-			commands_client.smembers("user:" + state.guid + ":topics", function(err, members) {
+			commands_client.smembers("user:" + state.guid + ":events", function(err, members) {
 				if (err) console.log(err, "TODO: Error Handling..." + err);
 				if (members) {
 					members.forEach(function(member) {
