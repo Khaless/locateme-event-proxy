@@ -47,19 +47,20 @@ var global_state = new GlobalState(pubsub_client);
  * System information page for our proxy .
  */
 server = http.createServer(function(req, res) {
-	res.writeHead(200, {"Content-Type": "text/html"});
-	res.write("<html><head><title>Statistics</title></head><body>");
-	res.write("<h1>Statistics</h1>");
-	res.write("Number of clients connected: " + global_state.num_clients() );
-	res.write("<h1>Clients</h1>");
+	var str = "<html><head><title>Statistics</title></head><body>";
+	str += "<h1>Statistics</h1>";
+	str += "Number of clients connected: " + global_state.num_clients();
+	str += "<h1>Clients</h1>";
 	for(var guid in global_state.cstate_by_guid) {
-		res.write("<h3>" + guid + "</h3><ul>");
+		str += "<h3>" + guid + "</h3><ul>";
 		global_state.cstate_by_guid[guid].topics.forEach(function(topic) {
-			res.write("<li>" + topic + "</li>");
+			str += "<li>" + topic + "</li>";
 		});
-		res.write("</ul>");
+		str += "</ul>";
 	}
-	res.write("</body></html>");
+	str += "</body></html>";
+	res.writeHead(200, {"Content-Type": "text/html", "Content-Length": str.length});
+	res.write(str);
 	res.end();
 });
 server.listen(8124, "127.0.0.1");
