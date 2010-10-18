@@ -54,7 +54,7 @@ var global_state = new GlobalState(pubsub_client);
 server = http.createServer(function(req, res) {
 	var str = "<html><head><title>Statistics</title></head><body>";
 	str += "<h1>Statistics</h1>";
-	str += "Number of clients Connected: " + raw_connections;
+	str += "Number of clients Connected: " + raw_connections + "<br />";
 	str += "Number of clients Connected and Identified: " + global_state.num_clients();
 	str += "<h1>Clients</h1>";
 	for(var guid in global_state.cstate_by_guid) {
@@ -78,6 +78,8 @@ console.log("Server running at http://127.0.0.1:8124/");
  */
 var socket = io.listen(server);
 socket.on("connection", function(client) {
+		
+	raw_connections++;
 
 	var state = new ClientState(client);
 
@@ -93,8 +95,6 @@ socket.on("connection", function(client) {
 
 	client.on("message", function(message) {
 
-		raw_connections++;
-		
 		if(state.state == ClientState.State.Initial) {
 			
 			/* 
