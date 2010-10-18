@@ -66,10 +66,12 @@ GlobalState.prototype = {
 	},
 
 	remove_client_state: function remove_client_state(client_state) {
+		if(this.cstate_by_guid[client_state.guid]) {
+			this.count--; // Dont count-- if they have not registered.
+		}
 		delete this.cstate_by_session_id[client_state.client.sessionId];
 		delete this.cstate_by_guid[client_state.guid];
 		this.remove_client_from_all_topics(client_state);
-		this.count--;
 	}
 
 }
