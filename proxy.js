@@ -29,6 +29,11 @@ require('./global_state');
 require('./client_state');
 
 /* 
+ * Number of raw connections (including unidentified clients)
+ */
+var raw_connections = 0;
+
+/* 
  * pubsub_client will be subscribed to the required 
  * topics on the redis pub-sub on clients behalf.
  */
@@ -49,7 +54,8 @@ var global_state = new GlobalState(pubsub_client);
 server = http.createServer(function(req, res) {
 	var str = "<html><head><title>Statistics</title></head><body>";
 	str += "<h1>Statistics</h1>";
-	str += "Number of clients connected: " + global_state.num_clients();
+	str += "Number of clients Connected: " + raw_connections;
+	str += "Number of clients Connected and Identified: " + global_state.num_clients();
 	str += "<h1>Clients</h1>";
 	for(var guid in global_state.cstate_by_guid) {
 		str += "<h3>" + guid + "</h3><ul>";
@@ -86,6 +92,8 @@ socket.on("connection", function(client) {
 	 */
 
 	client.on("message", function(message) {
+
+		raw_connections++;
 		
 		if(state.state == ClientState.State.Initial) {
 			
@@ -127,6 +135,9 @@ socket.on("connection", function(client) {
 	});
 
 	client.on("disconnect", function() {
+
+		raw_connections--;
+
 		console.log("Recieved disconnect from client:" + state.guid);
 		
 		/* cleanup the global client state this this client and 
