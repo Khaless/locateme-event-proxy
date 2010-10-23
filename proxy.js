@@ -134,7 +134,38 @@ socket.on("connection", function(client) {
 
 		}
 		else {
-			console.log("Received some sort of message from client:" + state.guid);
+			try {
+				if(!message.method) throw "Invalid JSON-RPC Message";
+				/* Todo: move the logic below out of this codefile. */
+				switch(message.method) {
+					case "location_update":
+						/* todo: sanitize input */
+						commands_client.set("user:" + state.guid + ":location", JSON.stringify(message.params[0]), function(err, res) {
+							if(res != true) {
+								sys.debug("Error updating location for " + state.guid + ": " + err);
+							}
+							else {
+								/* Update was successful. Write to the Event topics which this user is a part of. */
+								var msg = {
+									"type": "location_update",
+									"user": state.guid,
+									"data": message.params[0], //: todo passing user input to other users is bad. 2bfixed
+								};
+								state.topics.forEach(function(topic) {
+									commands_client.publish("topic:" + topic, JSON.stringify(msg), function(err, res) {
+										if(res != true) {
+											sys.debug("Error publishing to topic " + topic);
+										}
+									});
+								});
+							}
+						});
+						break;
+				}
+			}
+			catch(e) {
+				sys.debug(e);
+			}
 		}
 
 	});
