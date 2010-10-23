@@ -91,7 +91,12 @@ socket.on("connection", function(client) {
 	 * purposes.
 	 *
 	 * client.options.heartbeatInterval = <new interval in msec>;
+	 *
+	 * We add an added random component to try and combat the
+	 * bunching up of heartbeats which occurs with the setTimeout 
+	 * method.
 	 */
+	client.options.heartbeatInterval = 120000 + (Math.random() * 60000);
 
 	client.on("message", function(message) {
 
