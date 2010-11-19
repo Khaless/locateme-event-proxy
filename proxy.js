@@ -69,14 +69,20 @@ server = http.createServer(function(req, res) {
 	res.write(str);
 	res.end();
 });
-server.listen(8124, "0.0.0.0");
-console.log("Server running at http://127.0.0.1:8124/");
+
+var ip = "0.0.0.0";
+var port = 8124;
+if(process.argv[2]) ip = process.argv[2];
+if(process.argv[3]) port = process.argv[3];
+
+server.listen(port, ip);
+console.log("Server running at http://" + ip + ":" + port + "/");
 
 /* 
  * Socket server which provides functionality for
  * clients connecting to our proxy.
  */
-var socket = io.listen(server);
+var socket = io.listen(server/*, {log: null}*/);
 socket.on("connection", function(client) {
 		
 	raw_connections++;
@@ -101,12 +107,11 @@ socket.on("connection", function(client) {
 	client.on("message", function(message) {
 
 		if(state.state == ClientState.State.Initial) {
-			
 			/* 
 			 * Todo: Some Authentication and channel query protocol...
 			 */
 			state.guid = message;
-			console.log("Received Identity from client: " + state.guid);
+			//console.log("Received Identity from client: " + state.guid);
 
 			state.state = ClientState.State.Authenticated;
 			
@@ -171,9 +176,7 @@ socket.on("connection", function(client) {
 	});
 
 	client.on("disconnect", function() {
-
 		raw_connections--;
-
 		console.log("Recieved disconnect from client:" + state.guid);
 		
 		/* cleanup the global client state this this client and 
@@ -182,7 +185,6 @@ socket.on("connection", function(client) {
 		 */
 		global_state.remove_client_state(state);
 		delete state;
-
 	});
 
 });
