@@ -21,6 +21,7 @@
  */
 
 var sys   = require("sys"),
+		util  = require("util"),
 		http  = require("http"),
 		redis = require("./lib/redis-client"),
 		io    = require("./lib/socket.io/lib/socket.io");
@@ -76,7 +77,7 @@ if(process.argv[2]) ip = process.argv[2];
 if(process.argv[3]) port = process.argv[3];
 
 server.listen(port, ip);
-console.log("Server running at http://" + ip + ":" + port + "/");
+util.log("Server running at http://" + ip + ":" + port + "/");
 
 /* 
  * Socket server which provides functionality for
@@ -111,7 +112,7 @@ socket.on("connection", function(client) {
 			 * Todo: Some Authentication and channel query protocol...
 			 */
 			state.guid = message;
-			//console.log("Received Identity from client: " + state.guid);
+			//util.log("Received Identity from client: " + state.guid);
 
 			state.state = ClientState.State.Authenticated;
 			
@@ -128,10 +129,10 @@ socket.on("connection", function(client) {
 			 * the topics they should be subscribed to.
 			 */
 			commands_client.smembers("user:" + state.guid + ":events", function(err, members) {
-				if (err) console.log(err, "TODO: Error Handling..." + err);
+				if (err) util.log(err, "TODO: Error Handling..." + err);
 				if (members) {
 					members.forEach(function(member) {
-						console.log("Adding User " + state.guid + " to Event (topic) " + member);
+						util.log("Adding User " + state.guid + " to Event (topic) " + member);
 						global_state.add_client_to_topic(member.toString(), state);
 					});
 				}
@@ -177,7 +178,8 @@ socket.on("connection", function(client) {
 
 	client.on("disconnect", function() {
 		raw_connections--;
-		console.log("Recieved disconnect from client:" + state.guid);
+		
+		util.log("recieved disconnect from client " + state.guid);
 		
 		/* cleanup the global client state this this client and 
 		 * then delete this state (will be cleaned up when we 
