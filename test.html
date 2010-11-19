@@ -22,6 +22,7 @@
 			socket.on("message", function(data) { docit("message: " + data); });
 			socket.on("disconnect", function() { docit("disconnected");});
 			socket.send("903c55b3-c6f6-4689-beff-2ebd0b27c05e"); /* allows us to identify as this guid */
+			socket.send({"method": "location_update", "params": [{"latitude": 12345, "longitude": 12345}], "id": null});
 		} catch(e) {
 			alert(e);
 		}
