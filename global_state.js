@@ -16,9 +16,23 @@ GlobalState.prototype = {
 
 	topic_callback: function topic_callback(full_topic_name, data) {
 		var topic = full_topic_name.toString().substr(6); // Remove the prefix of 'topic:'
+
+		var obj = null;
+		try {
+			obj = JSON.parse(data);
+		} catch(e) {
+			util.log("Subscribers recieved non-json message: " + data);
+			return;
+		}
+
+		/* 
+		 * Verify message is safe to send out to clients
+		 * TODO: ...
+		 */
+
 		try {
 			for(var i in this.cstate_by_topic[topic]) {
-				this.cstate_by_topic[topic][i].client.send(data);
+				this.cstate_by_topic[topic][i].client.send(obj);
 			}
 		} catch(e) {
 			console.log("Received publish for unknown topic");
