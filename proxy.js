@@ -201,6 +201,32 @@ socket.on("connection", function(client) {
 								});
 							});
 						break;
+						case "join_event":
+							// Call Website RESTful service to create an event
+							rest.post(api_base_url + "/events/" + message.params[0]["guid"] + "/join", {
+								headers: {
+									"X-Authenticated-By-Proxy":  state.guid,
+									"Accept": "application/json"
+								}
+							}).addListener("success", function(data, response) {
+								// Success, created send message back to client with details.
+								client.send({
+									result: data,
+									error: null,
+									id: message.id
+								});
+							}).addListener("error", function(data, response) {
+								// Failure, report an error back.
+								sys.debug("Error creating event");
+								sys.debug(response);
+								sys.debug(data);
+								client.send({
+									result: null,
+									error: "Error creating event",
+									id: message.id
+								});
+							});
+						break;
 				}
 			}
 			catch(e) {
