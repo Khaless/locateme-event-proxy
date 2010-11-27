@@ -124,18 +124,18 @@ dispatcher.on("location_update", function(state, params, id) {
 });
 
 dispatcher.on("create_event", function(state, params, id) {
-		proxy_to_app(state.client, state, "events/", {
+		proxy_to_app(state, "events/", {
 			name: params["name"]
-		});
+		}, id);
 });
 
 dispatcher.on("join_event", function(state, params, id) {
-		proxy_to_app(state.client, state, "events/" + params["guid"] + "/join/", {});
+		proxy_to_app(state, "events/" + params["guid"] + "/join/", {}, id);
 });
 
 
 /* Refactor this */
-function proxy_to_app(state, path, data)  {
+function proxy_to_app(state, path, data, id)  {
 	// Call Website RESTful service to create an event
 	rest.post(api_base_url + path, {
 		data: data,
@@ -148,7 +148,7 @@ function proxy_to_app(state, path, data)  {
 		state.client.send({
 			result: data,
 			error: null,
-			id: message.id
+			id: id
 		});
 	}).addListener("error", function(data, response) {
 		// Failure, report an error back.
