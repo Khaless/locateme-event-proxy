@@ -24,10 +24,13 @@ var sys   = require("sys"),
 		util  = require("util"),
 		http  = require("http"),
 		redis = require("./lib/redis-client"),
-		io    = require("./lib/socket.io/lib/socket.io");
+		io    = require("./lib/socket.io/lib/socket.io"),
+    rest  = require("./lib/restler/restler");
 
 require('./global_state');
 require('./client_state');
+
+var api_base_url = "http://localhost:3000"
 
 /* 
  * Number of raw connections (including unidentified clients)
@@ -107,12 +110,14 @@ socket.on("connection", function(client) {
 
 	client.on("message", function(message) {
 
+		sys.debug("Received Message: " + message);
+
 		if(state.state == ClientState.State.Initial) {
 			/* 
 			 * Todo: Some Authentication and channel query protocol...
 			 */
 			state.guid = message;
-			//util.log("Received Identity from client: " + state.guid);
+			sys.debug("Received Identity from client: " + state.guid);
 
 			state.state = ClientState.State.Authenticated;
 			
@@ -167,6 +172,35 @@ socket.on("connection", function(client) {
 							}
 						});
 						break;
+						case "create_event":
+							// Call Website RESTful service to create an event
+							rest.post(api_base_url + "/events/", {
+								data: { 
+									name: message.params[0]["name"]
+								},
+								headers: {
+									"X-Authenticated-By-Proxy":  state.guid,
+									"Accept": "application/json"
+								}
+							}).addListener("success", function(data, response) {
+								// Success, created send message back to client with details.
+								client.send({
+									result: data,
+									error: null,
+									id: message.id
+								});
+							}).addListener("error", function(data, response) {
+								// Failure, report an error back.
+								sys.debug("Error creating event");
+								sys.debug(response);
+								sys.debug(data);
+								client.send({
+									result: null,
+									error: "Error creating event",
+									id: message.id
+								});
+							});
+						break;
 				}
 			}
 			catch(e) {
@@ -179,7 +213,7 @@ socket.on("connection", function(client) {
 	client.on("disconnect", function() {
 		raw_connections--;
 		
-		util.log("recieved disconnect from client " + state.guid);
+		sys.debug("recieved disconnect from client " + state.guid);
 		
 		/* cleanup the global client state this this client and 
 		 * then delete this state (will be cleaned up when we 
