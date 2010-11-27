@@ -15,10 +15,10 @@ Dispatcher.prototype = Object.create(events.EventEmitter.prototype, {
 	}
 });
 
-Dispatcher.prototype.dispatch_message = function(client, state, message) {
+Dispatcher.prototype.dispatch_message = function(state, message) {
 	
 	if(!message.method || !message.params[0]) {
-		client.send({
+		state.client.send({
 			result: null,
 			error: "Malformed Call",
 			id: message.id
@@ -27,7 +27,7 @@ Dispatcher.prototype.dispatch_message = function(client, state, message) {
 
 	/* Only allow calls to authenticate if the client is not yet authenticated */
 	if (state.state == ClientState.State.Initial && message.method != "authenticate") {
-		client.send({
+		state.client.send({
 			result: null,
 			error: "Not Authorized",
 			id: message.id
@@ -35,5 +35,5 @@ Dispatcher.prototype.dispatch_message = function(client, state, message) {
 		return;
 	}
 
-	this.emit(message.method, client, state, message.params[0], message.id);
+	this.emit(message.method, state, message.params[0], message.id);
 }

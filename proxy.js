@@ -59,7 +59,7 @@ var global_state = new GlobalState(pubsub_client);
 /* Initialize the dispatcher */
 var dispatcher = new Dispatcher();
 
-dispatcher.on("authenticate", function(client, state, params, id) {
+dispatcher.on("authenticate", function(state, params, id) {
 
 	/* 
 	 * Todo: Some Authentication and channel query protocol...
@@ -90,7 +90,7 @@ dispatcher.on("authenticate", function(client, state, params, id) {
 			});
 		}
 
-		client.send({
+		state.client.send({
 			result: {},
 			error: null,
 			id: id
@@ -99,7 +99,7 @@ dispatcher.on("authenticate", function(client, state, params, id) {
 	});
 });
 
-dispatcher.on("location_update", function(client, state, params, id) {
+dispatcher.on("location_update", function(state, params, id) {
 	/* todo: sanitize input */
 	commands_client.set("user:" + state.guid + ":location", JSON.stringify(params), function(err, res) {
 		if(res != true) {
@@ -123,19 +123,19 @@ dispatcher.on("location_update", function(client, state, params, id) {
 	});
 });
 
-dispatcher.on("create_event", function(client, state, params, id) {
-		proxy2app(client, state, "events/", {
+dispatcher.on("create_event", function(state, params, id) {
+		proxy_to_app(state.client, state, "events/", {
 			name: params["name"]
 		});
 });
 
-dispatcher.on("join_event", function(client, state, params, id) {
-		proxy2app(client, state, "events/" + params["guid"] + "/join/", {});
+dispatcher.on("join_event", function(state, params, id) {
+		proxy_to_app(state.client, state, "events/" + params["guid"] + "/join/", {});
 });
 
 
 /* Refactor this */
-function proxy_to_app(client, state, path, data)  {
+function proxy_to_app(state, path, data)  {
 	// Call Website RESTful service to create an event
 	rest.post(api_base_url + path, {
 		data: data,
@@ -145,7 +145,7 @@ function proxy_to_app(client, state, path, data)  {
 		}
 	}).addListener("success", function(data, response) {
 		// Success, created send message back to client with details.
-		client.send({
+		state.client.send({
 			result: data,
 			error: null,
 			id: message.id
@@ -155,7 +155,7 @@ function proxy_to_app(client, state, path, data)  {
 		sys.debug("Error creating event");
 		sys.debug(response);
 		sys.debug(data);
-		client.send({
+		state.client.send({
 			result: null,
 			error: "Error",
 			id: id
@@ -223,7 +223,7 @@ socket.on("connection", function(client) {
 	client.on("message", function(message) {
 		sys.debug("Received Message: " + message);
 		try {
-			dispatcher.dispatch_message(client, state, message);
+			dispatcher.dispatch_message(state, message);
 		}
 		catch(e) {
 			sys.debug(e);
