@@ -27,10 +27,14 @@ var sys   = require("sys"),
 		io    = require("./lib/socket.io/lib/socket.io"),
     rest  = require("./lib/restler/restler");
 
-require('./global_state');
-require('./client_state');
+require("./global_state");
+require("./client_state");
+var Dispatcher = require("./dispatcher");
 
-var api_base_url = "http://localhost:3000"
+/*
+ * Base URL for RESTful calls to the Web Application
+ */
+var api_base_url = "http://localhost:3000/"
 
 /* 
  * Number of raw connections (including unidentified clients)
@@ -51,6 +55,114 @@ commands_client = redis.createClient();
 
 /* Initialize global state */
 var global_state = new GlobalState(pubsub_client);
+
+/* Initialize the dispatcher */
+var dispatcher = new Dispatcher();
+
+dispatcher.on("authenticate", function(client, state, params, id) {
+
+	/* 
+	 * Todo: Some Authentication and channel query protocol...
+	 */
+	state.guid = params["guid"];
+	sys.debug("Received Identity from client: " + state.guid);
+
+	state.state = ClientState.State.Authenticated;
+	
+	/* 
+	 * Add this user to the global state collection as soon as we
+	 * know who they are.
+	 */
+	global_state.add_client_state(state);
+
+	/* 
+	 * Join this user to the active topics they should be subscribed to.
+	 *
+	 * In this prorotype user:<lowercase guid>:topics is a set containing
+	 * the topics they should be subscribed to.
+	 */
+	commands_client.smembers("user:" + state.guid + ":events", function(err, members) {
+		if (err) util.log(err, "TODO: Error Handling..." + err);
+		if (members) {
+			members.forEach(function(member) {
+				util.log("Adding User " + state.guid + " to Event (topic) " + member);
+				global_state.add_client_to_topic(member.toString(), state);
+			});
+		}
+
+		client.send({
+			result: {},
+			error: null,
+			id: id
+		});
+
+	});
+});
+
+dispatcher.on("location_update", function(client, state, params, id) {
+	/* todo: sanitize input */
+	commands_client.set("user:" + state.guid + ":location", JSON.stringify(params), function(err, res) {
+		if(res != true) {
+		sys.debug("Error updating location for " + state.guid + ": " + err);
+		}
+		else {
+		/* Update was successful. Write to the Event topics which this user is a part of. */
+		var msg = {
+		"type": "location_update",
+		"user": state.guid,
+		"data": params, //: todo passing user input to other users is bad. 2bfixed
+		};
+		state.topics.forEach(function(topic) {
+			commands_client.publish("topic:" + topic, JSON.stringify(msg), function(err, res) {
+				if(res != true) {
+				sys.debug("Error publishing to topic " + topic);
+				}
+				});
+			});
+		}
+	});
+});
+
+dispatcher.on("create_event", function(client, state, params, id) {
+		proxy2app(client, state, "events/", {
+			name: params["name"]
+		});
+});
+
+dispatcher.on("join_event", function(client, state, params, id) {
+		proxy2app(client, state, "events/" + params["guid"] + "/join/", {});
+});
+
+
+/* Refactor this */
+function proxy_to_app(client, state, path, data)  {
+	// Call Website RESTful service to create an event
+	rest.post(api_base_url + path, {
+		data: data,
+		headers: {
+			"X-Authenticated-By-Proxy":  state.guid,
+			"Accept": "application/json"
+		}
+	}).addListener("success", function(data, response) {
+		// Success, created send message back to client with details.
+		client.send({
+			result: data,
+			error: null,
+			id: message.id
+		});
+	}).addListener("error", function(data, response) {
+		// Failure, report an error back.
+		sys.debug("Error creating event");
+		sys.debug(response);
+		sys.debug(data);
+		client.send({
+			result: null,
+			error: "Error",
+			id: id
+		});
+	});
+}
+
 
 /* 
  * System information page for our proxy .
@@ -109,131 +221,13 @@ socket.on("connection", function(client) {
 	client.options.heartbeatInterval = 120000 + (Math.random() * 60000);
 
 	client.on("message", function(message) {
-
 		sys.debug("Received Message: " + message);
-
-		if(state.state == ClientState.State.Initial) {
-			/* 
-			 * Todo: Some Authentication and channel query protocol...
-			 */
-			state.guid = message;
-			sys.debug("Received Identity from client: " + state.guid);
-
-			state.state = ClientState.State.Authenticated;
-			
-			/* 
-			 * Add this user to the global state collection as soon as we
-			 * know who they are.
-			 */
-			global_state.add_client_state(state);
-
-			/* 
-			 * Join this user to the active topics they should be subscribed to.
-			 *
-			 * In this prorotype user:<lowercase guid>:topics is a set containing
-			 * the topics they should be subscribed to.
-			 */
-			commands_client.smembers("user:" + state.guid + ":events", function(err, members) {
-				if (err) util.log(err, "TODO: Error Handling..." + err);
-				if (members) {
-					members.forEach(function(member) {
-						util.log("Adding User " + state.guid + " to Event (topic) " + member);
-						global_state.add_client_to_topic(member.toString(), state);
-					});
-				}
-			});
-
+		try {
+			dispatcher.dispatch_message(client, state, message);
 		}
-		else {
-			try {
-				if(!message.method) throw "Invalid JSON-RPC Message";
-				/* Todo: move the logic below out of this codefile. */
-				switch(message.method) {
-					case "location_update":
-						/* todo: sanitize input */
-						commands_client.set("user:" + state.guid + ":location", JSON.stringify(message.params[0]), function(err, res) {
-							if(res != true) {
-								sys.debug("Error updating location for " + state.guid + ": " + err);
-							}
-							else {
-								/* Update was successful. Write to the Event topics which this user is a part of. */
-								var msg = {
-									"type": "location_update",
-									"user": state.guid,
-									"data": message.params[0], //: todo passing user input to other users is bad. 2bfixed
-								};
-								state.topics.forEach(function(topic) {
-									commands_client.publish("topic:" + topic, JSON.stringify(msg), function(err, res) {
-										if(res != true) {
-											sys.debug("Error publishing to topic " + topic);
-										}
-									});
-								});
-							}
-						});
-						break;
-						case "create_event":
-							// Call Website RESTful service to create an event
-							rest.post(api_base_url + "/events/", {
-								data: { 
-									name: message.params[0]["name"]
-								},
-								headers: {
-									"X-Authenticated-By-Proxy":  state.guid,
-									"Accept": "application/json"
-								}
-							}).addListener("success", function(data, response) {
-								// Success, created send message back to client with details.
-								client.send({
-									result: data,
-									error: null,
-									id: message.id
-								});
-							}).addListener("error", function(data, response) {
-								// Failure, report an error back.
-								sys.debug("Error creating event");
-								sys.debug(response);
-								sys.debug(data);
-								client.send({
-									result: null,
-									error: "Error creating event",
-									id: message.id
-								});
-							});
-						break;
-						case "join_event":
-							// Call Website RESTful service to create an event
-							rest.post(api_base_url + "/events/" + message.params[0]["guid"] + "/join", {
-								headers: {
-									"X-Authenticated-By-Proxy":  state.guid,
-									"Accept": "application/json"
-								}
-							}).addListener("success", function(data, response) {
-								// Success, created send message back to client with details.
-								client.send({
-									result: data,
-									error: null,
-									id: message.id
-								});
-							}).addListener("error", function(data, response) {
-								// Failure, report an error back.
-								sys.debug("Error creating event");
-								sys.debug(response);
-								sys.debug(data);
-								client.send({
-									result: null,
-									error: "Error creating event",
-									id: message.id
-								});
-							});
-						break;
-				}
-			}
-			catch(e) {
-				sys.debug(e);
-			}
+		catch(e) {
+			sys.debug(e);
 		}
-
 	});
 
 	client.on("disconnect", function() {
