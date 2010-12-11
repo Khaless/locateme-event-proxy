@@ -124,7 +124,14 @@ socket.on("connection", function(client) {
 	client.options.heartbeatInterval = 120000 + (Math.random() * 60000);
 
 	client.on("message", function(message) {
-		sys.debug("Received Message:" + message);
+		
+		if (message instanceof String) {
+			sys.debug("String from user[guid=" + (state.guid != null ? state.guid : "<Unauthenticated>") + "]:" + message);
+		}
+		else {
+			sys.debug("JSON Object from user[guid=" + (state.guid != null ? state.guid : "<Unauthenticated>") + "]:" + JSON.stringify(message));
+		}
+
 		try {
 			dispatcher.dispatch_message(state, message);
 		}
