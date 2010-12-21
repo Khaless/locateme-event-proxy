@@ -66,6 +66,7 @@ dispatcher.on("create_user", commands.create_user);
 dispatcher.on("location_update", commands.location_update);
 dispatcher.on("create_event", commands.create_event);
 dispatcher.on("join_event", commands.join_event);
+dispatcher.on("leave_event", commands.leave_event);
 
 /* 
  * System information page for our proxy .
