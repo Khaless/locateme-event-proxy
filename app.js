@@ -20,12 +20,21 @@
  *
  */
 
+require.paths.unshift("./node_modules");
+
 var sys   = require("sys"),
 		util  = require("util"),
 		http  = require("http");
 
-var redis = require("./lib/vendor/redis-client"),
-		io    = require("./lib/vendor/socket.io/lib/socket.io");
+/*
+ * If not using NPM:
+ * var redis = require("./lib/vendor/redis-client"),
+ *	   io    = require("./lib/vendor/socket.io/lib/socket.io");
+ *	   
+ * If using NPM:
+ */
+var redis = require("redis-client"),
+    io    = require("socket.io");
 
 var GlobalState = require("./lib/global_state"),
 		ClientState = require("./lib/client_state"),
@@ -42,17 +51,41 @@ var api_base_url = "http://localhost:3000/"
  */
 var raw_connections = 0;
 
-/*
- * commands_client will allow us to issue queries to
- * our redis client store.
- */
-commands_client = redis.createClient();
 
-/* 
- * pubsub_client will be subscribed to the required 
- * topics on the redis pub-sub on clients behalf.
+/*
+ * Setup our commands_client which we will use to issue queries to
+ * our redis client store.
+ *
+ * Also setup our pubsub_client which we will use to subscribe
+ * to the required topics on behalf of connected clients.
+ *
+ * We do this setup in a cloud-aware way. E.g. if we're running
+ * on CloudFoundry we check the available Services, otherwise
+ * we fall back to localhost if not in CloudFoundry.
  */
-pubsub_client = redis.createClient();
+if (process.env.VCAP_SERVICES) {
+	var services = JSON.parse(process.env.VCAP_SERVICES);
+	for (serviceType in services) {
+		if (serviceType.match(/redis*/)) {
+			var service = services[serviceType][0];
+			console.log("Connecting to Redis service " + service.name + ":" + service.credentials.hostname + ":" + service.credentials.port );
+			commands_client = redis.createClient(service.credentials.port, service.credentials.hostname);
+			commands_client.auth(service.credentials.password);
+			pubsub_client = redis.createClient(service.credentials.port, service.credentials.hostname);
+			pubsub_client.auth(service.credentials.password);
+			break;
+		}
+	}
+}
+	
+/* 
+ * We're not running in CloudFoundry so fallback to local 
+ */
+else {
+	commands_client = redis.createClient();
+	pubsub_client = redis.createClient();
+}
+
 
 /* Initialize global state */
 var global_state = new GlobalState(pubsub_client, commands_client, api_base_url);
@@ -90,8 +123,12 @@ server = http.createServer(function(req, res) {
 	res.end();
 });
 
-var ip = "0.0.0.0";
-var port = 8124;
+/*
+ * Use Cloudfoundry settings or default to 0.0.0.0:8124
+ * Also check command line params
+ */
+var ip = process.env.VCAP_APP_HOST || "0.0.0.0";
+var port = process.env.VCAP_APP_PORT || 8124;
 if(process.argv[2]) ip = process.argv[2];
 if(process.argv[3]) port = process.argv[3];
 
