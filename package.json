@@ -1,0 +1,9 @@
+{
+  "name":"event-proxy",
+  "version":"0.0.1",
+  "dependencies":{
+		"restler": "",
+		"redis-client": "",
+		"socket.io": ""
+	}
+}
