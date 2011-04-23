@@ -33,7 +33,7 @@ var sys   = require("sys"),
  *	   
  * If using NPM:
  */
-var redis = require("redis-client"),
+var redis = require("redis"),
     io    = require("socket.io");
 
 var GlobalState = require("./lib/global_state"),
@@ -44,7 +44,7 @@ var GlobalState = require("./lib/global_state"),
 /*
  * Base URL for RESTful calls to the Web Application
  */
-var api_base_url = "http://localhost:3000/"
+var api_base_url = "http://localhost:3000/";
 
 /* 
  * Number of raw connections (including unidentified clients)
@@ -127,13 +127,11 @@ server = http.createServer(function(req, res) {
  * Use Cloudfoundry settings or default to 0.0.0.0:8124
  * Also check command line params
  */
-var ip = process.env.VCAP_APP_HOST || "0.0.0.0";
 var port = process.env.VCAP_APP_PORT || 8124;
-if(process.argv[2]) ip = process.argv[2];
-if(process.argv[3]) port = process.argv[3];
+if(process.argv[2]) port = process.argv[2];
 
-server.listen(port, ip);
-util.log("Server running at http://" + ip + ":" + port + "/");
+server.listen(port);
+util.log("Server running on port " + port);
 
 /* 
  * Socket server which provides functionality for
