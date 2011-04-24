@@ -20,8 +20,6 @@
  *
  */
 
-require.paths.unshift("./node_modules");
-
 var sys   = require("sys"),
 		util  = require("util"),
 		http  = require("http");
@@ -44,8 +42,16 @@ var GlobalState = require("./lib/global_state"),
 
 /*
  * Base URL for RESTful calls to the Web Application
+ * for localhost development
  */
 var api_base_url = "http://localhost:3000/";
+
+/*
+ * Base URL for RESTful calls to the Web Application
+ * for CloudFoundry deployment (will override api_base_url if
+ * we detect we're running on CF
+ */
+var api_cf_base = "http://event-proxy-web.cloudfoundry.com/";
 
 /* 
  * Number of raw connections (including unidentified clients)
@@ -76,6 +82,12 @@ if (process.env.VCAP_SERVICES) {
 			break;
 		}
 	}
+
+	/* 
+	 * Since we're running in CF, set our api_base_url to 
+	 * a CF application.
+	 */
+	api_base_url = api_cf_base;
 }
 	
 /* 

@@ -3,14 +3,60 @@
 		<title>Event Proxy Test Harness</title>
 		<script src="/socket.io/socket.io.js"></script> 
 		<script> 
-			var socket = new io.Socket(window.location.host, {"transports": ["xhr-polling"] }); 
+			var socket = new io.Socket(window.location.hostname, {"transports": ["xhr-polling"] }); 
 			socket.connect();
-			socket.on('connect', function(){ alert("connected"); }) 
-			socket.on('message', function(){  }) 
-			socket.on('disconnect', function() {} ) 
+
+			function log(msg) {
+				document.getElementById("log").appendChild(document.createTextNode(msg + "\r\n"));
+			}
+
+			socket.on('connect', function() { 
+				log("connected...");
+				log("authenticating as test@test.test");
+				socket.send({"method": "authenticate", "params":  [{ "email": "test@test.test", "password": "123456" }], "id": 1});
+			});
+
+			socket.on('message', function(data){  
+				log("Recieved Object: {\r\n" + DumpObjectIndented(data, "  ") + "\r\n}");
+			});
+			socket.on('disconnect', function() {} );
+
+function DumpObjectIndented(obj, indent)
+{
+	var result = "";
+	if (indent == null) indent = "";
+
+	for (var property in obj)
+	{
+		var value = obj[property];
+		if (typeof value == 'string')
+			value = "'" + value + "'";
+		else if (typeof value == 'object')
+		{
+			if (value instanceof Array)
+			{
+				// Just let JS convert the Array to a string!
+				value = "[ " + value + " ]";
+			}
+			else
+			{
+				// Recursive dump
+				// (replace "  " by "\t" or something else if you prefer)
+				var od = DumpObjectIndented(value, indent + "  ");
+				// If you like { on the same line as the key
+				//value = "{\n" + od + "\n" + indent + "}";
+				// If you prefer { and } to be aligned
+				value = "\n" + indent + "{\n" + od + "\n" + indent + "}";
+			}
+		}
+		result += indent + "'" + property + "' : " + value + ",\n";
+	}
+	return result.replace(/,\n$/, "");
+}
 		</script> 
 	</head>
 	<body>
+		<pre id="log"></pre>
 	</body>
 </html>
 
