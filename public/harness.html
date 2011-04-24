@@ -4,6 +4,7 @@
 		<script src="/socket.io/socket.io.js"></script> 
 		<script> 
 			var socket = new io.Socket(window.location.hostname, {"transports": ["xhr-polling"] }); 
+			var locationUpdateTimer = null;
 			socket.connect();
 
 			function log(msg) {
@@ -14,12 +15,21 @@
 				log("connected...");
 				log("authenticating as test@test.test");
 				socket.send({"method": "authenticate", "params":  [{ "email": "test@test.test", "password": "123456" }], "id": 1});
+				log("beginning location-update tast");
+
+				locationUpdateTimer = setInterval(function() {
+					socket.send({"method": "location_update", "params":  [{"latitude": 1.2, "longitude": 3.4}], "id": null});
+				}, 10000);
+
 			});
 
 			socket.on('message', function(data){  
 				log("Recieved Object: {\r\n" + DumpObjectIndented(data, "  ") + "\r\n}");
 			});
-			socket.on('disconnect', function() {} );
+			socket.on('disconnect', function() {
+				log("disconnected");
+				clearInterval(locationUpdateTimer);
+			} );
 
 function DumpObjectIndented(obj, indent)
 {
