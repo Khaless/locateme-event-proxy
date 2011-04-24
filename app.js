@@ -33,8 +33,9 @@ var sys   = require("sys"),
  *	   
  * If using NPM:
  */
-var redis = require("redis"),
-    io    = require("socket.io");
+var redis   = require("redis"),
+    io      = require("socket.io"),
+    express = require("express");
 
 var GlobalState = require("./lib/global_state"),
 		ClientState = require("./lib/client_state"),
@@ -50,7 +51,6 @@ var api_base_url = "http://localhost:3000/";
  * Number of raw connections (including unidentified clients)
  */
 var raw_connections = 0;
-
 
 /*
  * Setup our commands_client which we will use to issue queries to
@@ -86,7 +86,6 @@ else {
 	pubsub_client = redis.createClient();
 }
 
-
 /* Initialize global state */
 var global_state = new GlobalState(pubsub_client, commands_client, api_base_url);
 
@@ -102,9 +101,38 @@ dispatcher.on("join_event", commands.join_event);
 dispatcher.on("leave_event", commands.leave_event);
 
 /* 
- * System information page for our proxy .
+ * Use the Express framework to serve a few system pages
+ * for our event proxy:
+ * - /
+ * - /statistics/
+ * - /harness/
  */
-server = http.createServer(function(req, res) {
+server = express.createServer();
+server.configure(function() {
+	server.use(express.methodOverride());
+	server.use(express.bodyParser());
+
+
+	/*
+	 * Hack to enable sticky sessions on the CloudFoundry engine.
+	 * CF assigns sticky sessions if it detects a JSESSIONID cookie
+	 * so we use this hack to set one.
+	 */
+	server.use(express.cookieParser());
+	server.use(express.session({ secret: "secret", "key": "JSESSIONID" }));
+	
+	server.use(server.router);
+
+});
+
+server.get("/", function(req, res) {
+	var str = "<html><head></head><body><h1>Hi There!</h1></body></html>";
+	res.writeHead(200, {"Content-Type": "text/html", "Content-Length": str.length});
+	res.write(str);
+	res.end();
+});
+
+server.get("/statistics", function(req, res) {
 	var str = "<html><head><title>Statistics</title></head><body>";
 	str += "<h1>Statistics</h1>";
 	str += "Number of clients Connected: " + raw_connections + "<br />";
@@ -123,13 +151,15 @@ server = http.createServer(function(req, res) {
 	res.end();
 });
 
+server.get("/harness", function(req, res) {
+	res.sendfile(__dirname + "/public/harness.html");
+});
+
 /*
  * Use Cloudfoundry settings or default to 0.0.0.0:8124
  * Also check command line params
  */
 var port = process.env.VCAP_APP_PORT || 8124;
-if(process.argv[2]) port = process.argv[2];
-
 server.listen(port);
 util.log("Server running on port " + port);
 
@@ -137,7 +167,7 @@ util.log("Server running on port " + port);
  * Socket server which provides functionality for
  * clients connecting to our proxy.
  */
-var socket = io.listen(server/*, {log: null}*/);
+var socket = io.listen(server, { transports: ["xhr-polling"], transportOptions: {"xhr-polling": {duration: 10000}}} /*, {log: null}*/);
 socket.on("connection", function(client) {
 		
 	raw_connections++;

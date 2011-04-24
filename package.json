@@ -4,6 +4,7 @@
   "dependencies":{
 		"restler": "",
 		"redis": "",
-		"socket.io": ""
+		"socket.io": "",
+		"express": ""
 	}
 }
