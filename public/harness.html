@@ -3,6 +3,7 @@
 		<title>Event Proxy Test Harness</title>
 		<script src="/socket.io/socket.io.js"></script> 
 		<script> 
+			var done_login = false;
 			var socket = new io.Socket(window.location.hostname, {"transports": ["xhr-polling"] }); 
 			var locationUpdateTimer = null;
 			socket.connect();
@@ -13,12 +14,11 @@
 
 			socket.on('connect', function() { 
 				log("connected...");
-				log("authenticating as test@test.test");
-				socket.send({"method": "authenticate", "params":  [{ "email": "test@test.test", "password": "123456" }], "id": 1});
-				log("beginning location-update tast");
-
 				locationUpdateTimer = setInterval(function() {
-					socket.send({"method": "location_update", "params":  [{"latitude": 1.2, "longitude": 3.4}], "id": null});
+					if(done_login == true && document.getElementById("location_update_cbx").checked == true) {
+						log("Sending Location Update...");
+						socket.send({"method": "location_update", "params":  [{"latitude": 1.2, "longitude": 3.4}], "id": null});
+					}
 				}, 10000);
 
 			});
@@ -30,6 +30,13 @@
 				log("disconnected");
 				clearInterval(locationUpdateTimer);
 			} );
+
+			function login() {
+				if(done_login == true) return;
+				done_login = true;
+				log("authenticating as test@test.test");
+				socket.send({"method": "authenticate", "params":  [{ "email": "test@test.test", "password": "123456" }], "id": 1});
+			}
 
 function DumpObjectIndented(obj, indent)
 {
@@ -66,7 +73,12 @@ function DumpObjectIndented(obj, indent)
 		</script> 
 	</head>
 	<body>
-		<pre id="log"></pre>
+		<div>
+			<a href="#" id="login_btn" onclick="login(); return false;">Login</a>&nbsp;&nbsp;|&nbsp;&nbsp;<input type="checkbox" id="location_update_cbx" /> Send Location
+		</div>
+		<div>
+			<pre id="log"></pre>
+		</div>
 	</body>
 </html>
 
